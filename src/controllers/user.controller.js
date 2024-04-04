@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -320,7 +321,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 const getUserChannel = asyncHandler(async (req, res) => {
   try {
     const { userName } = req.params;
-    console.log("userName------>",userName)
+    console.log("userName------>", userName);
     if (!userName.trim()) {
       throw new ApiError(400, "username is missing");
     }
@@ -378,7 +379,7 @@ const getUserChannel = asyncHandler(async (req, res) => {
         },
       },
     ]);
-    console.log("Channel Data------>",channel);
+    console.log("Channel Data------>", channel);
     if (!channel?.length) {
       throw new ApiError(404, "channel does not exists");
     }
@@ -388,10 +389,66 @@ const getUserChannel = asyncHandler(async (req, res) => {
         new ApiResponse(200, channel[0], "User channel fetched successfully")
       );
   } catch (error) {
-    console.log(error)
+    console.log(error);
     throw new ApiError(500, "Something want wrong when fetching user channel");
   }
 });
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  try {
+    const userId = req?.user?._id;
+    const user = await User.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $lookup: {
+          from: "Videos",
+          localField: "watchHistory",
+          foreignField: "_id",
+          as: "watchHistory",
+          pipeline: [
+            {
+              $lookup: {
+                from: "User",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                  {
+                    $project: {
+                      fullName: 1,
+                      userName: 1,
+                      avatar: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $addFields:{
+                owner:{
+                  $first: "$owner"
+                }
+              }
+            }
+          ],
+        },
+      },
+    ]);
+    console.log("user-------->",user);
+    return res.status(200).json(new ApiResponse(200,user[0].watchHistory,"Watch history fetched successfully"))
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(
+      500,
+      "Something want wrong when fetching user watch history"
+    );
+  }
+});
+
 export {
   registerUser,
   login,
@@ -403,4 +460,5 @@ export {
   updateUserCoverImage,
   updateUserAvatar,
   getUserChannel,
+  getWatchHistory
 };
