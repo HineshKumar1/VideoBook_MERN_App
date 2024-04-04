@@ -50,7 +50,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
   });
 
   if (existedUser) {
-    throw new ApiError(409, "User with email or userName already exists!");
+    new ApiError(409, "User with email or userName already exists!");
   }
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
@@ -231,8 +231,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
   try {
     const { fullName, email } = req.body;
-
-    if (!fullName || !email) {
+    if (!(fullName || email)) {
       throw new ApiError(400, "All fields are required");
     }
     const user = await User.findByIdAndUpdate(
@@ -256,7 +255,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   try {
-    const avatarLocalPath = req.files?.path;
+    const avatarLocalPath = req.file?.path;
 
     if (!avatarLocalPath) {
       throw new ApiError(400, "Avatar files is missing");
@@ -281,7 +280,6 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     res
       .status(200)
       .json(new ApiResponse(200, user, "Avatar updated successfully"));
-
   } catch (error) {
     throw new ApiError(500, "Something went wrong");
   }
@@ -289,7 +287,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   try {
-    const coverImageLocalPath = req.files?.path;
+    const coverImageLocalPath = req.file?.path;
 
     if (!coverImageLocalPath) {
       throw new ApiError(400, "cover image file is missing");
@@ -315,7 +313,83 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, user, "Cover Image updated successfully"));
   } catch (error) {
-    throw new ApiError(500, "Something went wrong");
+    throw new ApiError(500, "Something went wrong while updating cover image");
+  }
+});
+
+const getUserChannel = asyncHandler(async (req, res) => {
+  try {
+    const { userName } = req.params;
+    console.log("userName------>",userName)
+    if (!userName.trim()) {
+      throw new ApiError(400, "username is missing");
+    }
+
+    //aggrigation pipelines
+    const channel = await User.aggregate([
+      {
+        $match: {
+          userName: userName?.toLowerCase(),
+        },
+      },
+      {
+        $lookup: {
+          from: "Subscriptions",
+          localField: "_id",
+          foreignField: "channel",
+          as: "subscribers",
+        },
+      },
+      {
+        $lookup: {
+          from: "Subscriptions",
+          localField: "_id",
+          foreignField: "subscriber",
+          as: "subscribedTo",
+        },
+      },
+      {
+        $addFields: {
+          subscribersCount: {
+            $size: "$subscribers",
+          },
+          channelsSubscribedToCount: {
+            $size: "$subscribedTo",
+          },
+          isSubscribed: {
+            $cond: {
+              if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+              then: true,
+              else: false,
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          fullName: 1,
+          userName: 1,
+          subscribersCount: 1,
+          channelsSubscribedToCount: 1,
+          isSubscribed: 1,
+          avatar: 1,
+          coverImage: 1,
+          email: 1,
+        },
+      },
+    ]);
+    console.log("Channel Data------>",channel);
+    if (!channel?.length) {
+      throw new ApiError(404, "channel does not exists");
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, channel[0], "User channel fetched successfully")
+      );
+  } catch (error) {
+    console.log(error)
+    throw new ApiError(500, "Something want wrong when fetching user channel");
   }
 });
 export {
@@ -328,4 +402,5 @@ export {
   updateAccountDetails,
   updateUserCoverImage,
   updateUserAvatar,
+  getUserChannel,
 };
