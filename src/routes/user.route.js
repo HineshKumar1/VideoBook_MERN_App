@@ -40,7 +40,11 @@ router.route("/change-password").put(verifyJWT, changeCurrentPassword),
 router.route("/update-user").patch(verifyJWT, updateAccountDetails);
 router
   .route("/update-avatar")
-  .patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
+  .patch(
+    verifyJWT, 
+    upload.single("avatar"), 
+    updateUserAvatar
+  );
 router
   .route("/update-cover-image")
   .patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
