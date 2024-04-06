@@ -142,7 +142,7 @@ const login = asyncHandler(async (req, res, next) => {
 const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
-    { $set: { refreshToken: undefined } },
+    { $unset: { refreshToken: 1 } },
     { new: true }
   );
 
@@ -335,7 +335,7 @@ const getUserChannel = asyncHandler(async (req, res) => {
       },
       {
         $lookup: {
-          from: "Subscriptions",
+          from: "subscriptions",
           localField: "_id",
           foreignField: "channel",
           as: "subscribers",
@@ -343,7 +343,7 @@ const getUserChannel = asyncHandler(async (req, res) => {
       },
       {
         $lookup: {
-          from: "Subscriptions",
+          from: "subscriptions",
           localField: "_id",
           foreignField: "subscriber",
           as: "subscribedTo",
@@ -428,18 +428,26 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               },
             },
             {
-              $addFields:{
-                owner:{
-                  $first: "$owner"
-                }
-              }
-            }
+              $addFields: {
+                owner: {
+                  $first: "$owner",
+                },
+              },
+            },
           ],
         },
       },
     ]);
-    console.log("user-------->",user);
-    return res.status(200).json(new ApiResponse(200,user[0].watchHistory,"Watch history fetched successfully"))
+    console.log("user-------->", user);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          user[0].watchHistory,
+          "Watch history fetched successfully"
+        )
+      );
   } catch (error) {
     console.log(error);
     throw new ApiError(

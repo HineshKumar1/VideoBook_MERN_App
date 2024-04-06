@@ -1,21 +1,20 @@
-import { Subscriptions } from "../models/subscription.model.js";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
+import { subscription} from "../models/subscription.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 const toggleSubscription = asyncHandler(async (req, res) => {
   try {
     const { channelId } = req.params;
-    const { subscriberId } = req.user._id;
-
-    const subscription = await Subscriptions.create({
-      channelId,
-      subscriberId,
+    
+    const subscribe = await subscription.create({
+      channel: channelId,
+        subscriber: req.user._id,
     });
     return res
       .status(200)
       .json(
-        new ApiResponse(200, subscription, "Subscription Toggled Successfully")
+        new ApiResponse(200, subscribe, "Subscription Toggled Successfully")
       );
   } catch (error) {
     console.log(error);
@@ -23,6 +22,6 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = {
-    toggleSubscription
-}
+export { 
+    toggleSubscription 
+};
