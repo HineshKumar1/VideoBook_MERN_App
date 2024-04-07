@@ -79,7 +79,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 const getSubscribedChannels = asyncHandler(async (req, res) => {
   try {
     const { subscriberId } = req.params;
-    console.log(subscriberId);
+
     const SubscribedChannels = await subscription.aggregate([
       {
         $match: {
@@ -105,7 +105,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
         },
       },
     ]);
-    if (!SubscribedChannels) {
+    if (SubscribedChannels.length === 0) {
       return res
         .status(400)
         .json(new ApiError(400, null, "No Subscribed Channels"));
