@@ -79,7 +79,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 const getSubscribedChannels = asyncHandler(async (req, res) => {
   try {
     const { subscriberId } = req.params;
-
+    console.log(subscriberId);
     const SubscribedChannels = await subscription.aggregate([
       {
         $match: {
