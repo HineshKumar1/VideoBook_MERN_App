@@ -102,4 +102,23 @@ const updateVideo = asyncHandler(async (req, res) => {
   }
 });
 
-export { publishVideo, getVideoById, updateVideo };
+const deleteVideo  = asyncHandler(async (req, res) => {
+    try {
+        const { videoId } = req.params;
+
+        const findVideo = await Video.find({_id: videoId, owner: req.user.id});
+        console.log(findVideo);
+        if(!findVideo){
+            return res.status(404).json(new ApiError(404, null, "Video not found"));
+        }
+        //delete video from cloudinary
+        await deleteOnCloudinary(findVideo.videoFile, "Video");
+
+        await Video.findByIdAndDelete(videoId);
+        return res.status(200).json(new ApiResponse(200, null, "Video deleted successfully"));
+    } catch (error) {
+        console.log(error);
+        throw new ApiError(500, "Internal Server Error");
+    }
+})
+export { publishVideo, getVideoById, updateVideo, deleteVideo };
