@@ -8,6 +8,15 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   try {
     const { channelId } = req.params;
 
+    const isSubscribed = await subscription.findOne({
+      channel: channelId,
+      subscriber: req.user._id,
+    });
+    if (isSubscribed) {
+      return res
+        .status(400)
+        .json(new ApiError(400, null, "Already Subscribed"));
+    }
     const subscribe = await subscription.create({
       channel: channelId,
       subscriber: req.user._id,
@@ -44,30 +53,21 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
       {
         $project: {
           subscribers: {
-            _id:1,
-           userName:1,
-            fullName:1,
-            avatar:1
+            _id: 1,
+            userName: 1,
+            fullName: 1,
+            avatar: 1,
           },
         },
       },
-      // {
-      //   $addFields: {
-      //     channelDetails: {
-      //       $arrayElemAt: ["$channels", 0], // Corrected usage of $arrayElemAt
-      //     },
-      //   },
-      // },
     ]);
-    console.log(userSubscribedChannels);
-
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
           userSubscribedChannels,
-          "All user channel Subscribes fetched Successfull!!"
+          "All user channel Subscribes fetched Successfully!"
         )
       );
   } catch (error) {
@@ -76,4 +76,52 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   }
 });
 
-export { toggleSubscription, getUserChannelSubscribers };
+const getSubscribedChannels = asyncHandler(async (req, res) => {
+  try {
+    const { subscriberId } = req.params;
+
+    const SubscribedChannels = await subscription.aggregate([
+      {
+        $match: {
+          subscriber: new mongoose.Types.ObjectId(subscriberId),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "channel",
+          foreignField: "_id",
+          as: "channels",
+        },
+      },
+      {
+        $project: {
+          channels: {
+            _id: 1,
+            userName: 1,
+            fullName: 1,
+            avatar: 1,
+          },
+        },
+      },
+    ]);
+    if (!SubscribedChannels) {
+      return res
+        .status(400)
+        .json(new ApiError(400, null, "No Subscribed Channels"));
+    }
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          SubscribedChannels,
+          "All user channel Subscribes fetched Successfully!"
+        )
+      );
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, "Internal Server Error");
+  }
+});
+export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
